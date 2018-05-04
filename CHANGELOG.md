@@ -20,6 +20,11 @@ for Rust libraries in [RFC #1105](https://github.com/rust-lang/rfcs/blob/master/
   `NonAggregate` for your function. See [the documentation for
   `sql_function!`][sql-function-1-3-0] for more details.
 
+* All functions and operators provided by Diesel can now be used with numeric
+  operators if the SQL type supports it.
+
+* `PgInterval` can now be used with `-`, `*`, and `/`.
+
 ### Changed
 
 * `sql_function!` has been redesigned. The syntax is now `sql_function!(fn

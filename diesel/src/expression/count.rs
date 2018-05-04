@@ -54,7 +54,7 @@ pub fn count_star() -> CountStar {
     CountStar
 }
 
-#[derive(Debug, Clone, Copy, QueryId)]
+#[derive(Debug, Clone, Copy, QueryId, DieselNumericOps)]
 #[doc(hidden)]
 pub struct Count<T> {
     target: T,
@@ -75,7 +75,7 @@ impl<T: QueryFragment<DB>, DB: Backend> QueryFragment<DB> for Count<T> {
 
 impl_selectable_expression!(Count<T>);
 
-#[derive(Debug, Clone, Copy, QueryId)]
+#[derive(Debug, Clone, Copy, QueryId, DieselNumericOps)]
 #[doc(hidden)]
 pub struct CountStar;
 
