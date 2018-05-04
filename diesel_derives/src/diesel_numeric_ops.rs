@@ -7,7 +7,9 @@ pub fn derive(mut item: syn::DeriveInput) -> Result<quote::Tokens, Diagnostic> {
     let struct_name = item.ident;
 
     {
-        let where_clause = item.generics.where_clause.get_or_insert(parse_quote!(where));
+        let where_clause = item.generics
+            .where_clause
+            .get_or_insert(parse_quote!(where));
         where_clause.predicates.push(parse_quote!(Self: Expression));
         where_clause.predicates.push_punct(Default::default());
     }
@@ -71,6 +73,6 @@ pub fn derive(mut item: syn::DeriveInput) -> Result<quote::Tokens, Diagnostic> {
                     ops::Div::new(self, rhs.as_expression())
                 }
             }
-        }
+        },
     ))
 }
