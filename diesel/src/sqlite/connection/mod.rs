@@ -1,5 +1,6 @@
 extern crate libsqlite3_sys as ffi;
 
+mod functions;
 #[doc(hidden)]
 pub mod raw;
 mod serialized_value;
@@ -20,6 +21,7 @@ use result::*;
 use self::raw::RawConnection;
 use self::statement_iterator::*;
 use self::stmt::{Statement, StatementUse};
+use serialize::ToSql;
 use sql_types::HasSqlType;
 use sqlite::Sqlite;
 
@@ -210,6 +212,22 @@ impl SqliteConnection {
             Statement::prepare(&self.raw_connection, sql)
         })
     }
+
+    #[doc(hidden)]
+    pub fn register_sql_function<ArgsSqlType, RetSqlType, Args, Ret, F>(
+        &self,
+        fn_name: &str,
+        deterministic: bool,
+        f: F,
+    ) -> QueryResult<()>
+    where
+        F: FnMut(Args) -> Ret + Send + 'static,
+        Args: Queryable<ArgsSqlType, Sqlite>,
+        Ret: ToSql<RetSqlType, Sqlite>,
+        Sqlite: HasSqlType<RetSqlType>,
+    {
+        functions::register(&self.raw_connection, fn_name, deterministic, f)
+    }
 }
 
 fn error_message(err_code: libc::c_int) -> &'static str {
@@ -270,5 +288,30 @@ mod tests {
 
         assert_eq!(Ok(true), query.get_result(&connection));
         assert_eq!(1, connection.statement_cache.len());
+    }
+
+    use sql_types::Text;
+    sql_function!(fn fun_case(x: Text) -> Text);
+
+    #[test]
+    fn register_custom_function() {
+        let connection = SqliteConnection::establish(":memory:").unwrap();
+        fun_case::register_impl(&connection, |x: String| {
+            x.chars()
+                .enumerate()
+                .map(|(i, c)| {
+                    if i % 2 == 0 {
+                        c.to_lowercase().to_string()
+                    } else {
+                        c.to_uppercase().to_string()
+                    }
+                })
+                .collect::<String>()
+        }).unwrap();
+
+        let mapped_string = ::select(fun_case("foobar"))
+            .get_result::<String>(&connection)
+            .unwrap();
+        assert_eq!("fOoBaR", mapped_string);
     }
 }

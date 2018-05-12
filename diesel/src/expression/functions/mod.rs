@@ -260,8 +260,58 @@ macro_rules! __diesel_sql_function_body {
                     }
                 }
             }
+
+            __diesel_sqlite_register_fn! {
+                type_args = ($($type_args)*),
+                fn_name = $fn_name,
+                args = ($($arg_type,)+),
+                ret = $return_type,
+            }
         }
     }
+}
+
+#[macro_export]
+#[doc(hidden)]
+#[cfg(feature = "sqlite")]
+macro_rules! __diesel_sqlite_register_fn {
+    // We can't handle generic functions for SQLite
+    (
+        type_args = ($($type_args:tt)+),
+        $($rest:tt)*
+    ) => {
+    };
+
+    (
+        type_args = (),
+        fn_name = $fn_name:ident,
+        args = ($($args:ty,)+),
+        ret = $ret:ty,
+    ) => {
+        #[allow(dead_code)]
+        pub fn register_impl<Args, Ret, F>(
+            conn: &$crate::SqliteConnection,
+            f: F,
+        ) -> $crate::QueryResult<()>
+        where
+            F: Fn(Args) -> Ret + Send + 'static,
+            Args: $crate::deserialize::Queryable<($($args),+), $crate::sqlite::Sqlite>,
+            Ret: $crate::serialize::ToSql<$ret, $crate::sqlite::Sqlite>,
+        {
+            conn.register_sql_function::<($($args),*), $ret, _, _, _>(
+                stringify!($fn_name),
+                true,
+                f,
+            )
+        }
+    };
+}
+
+#[macro_export]
+#[doc(hidden)]
+#[cfg(not(feature = "sqlite"))]
+macro_rules! __diesel_sqlite_register_fn {
+    ($($token:tt)*) => {};
 }
 
 #[macro_export]
